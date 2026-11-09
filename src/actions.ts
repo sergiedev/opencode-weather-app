@@ -1,5 +1,6 @@
 import type { AppContext } from "./context.ts";
 import { errorMessage } from "./errors.ts";
+import { renderForecast } from "./forecast.ts";
 import { cityLabel, unitSymbol } from "./format.ts";
 import { messages } from "./messages.ts";
 import {
@@ -10,12 +11,12 @@ import {
   withUnit,
 } from "./store.ts";
 import type { City } from "./types.ts";
-import { fetchWeather, searchCities } from "./weather.ts";
+import { fetchDailyForecast, fetchWeather, searchCities } from "./weather.ts";
 
 export async function showDefaultWeather(context: AppContext): Promise<void> {
   const city = findDefaultCity(context.store);
   if (!city) {
-    context.print(messages.noDefaultCity);
+    context.print(context.theme.muted(messages.noDefaultCity));
     return;
   }
 
@@ -25,7 +26,7 @@ export async function showDefaultWeather(context: AppContext): Promise<void> {
 export async function showAllWeather(context: AppContext): Promise<void> {
   const { cities } = context.store;
   if (cities.length === 0) {
-    context.print(messages.noCities);
+    context.print(context.theme.muted(messages.noCities));
     return;
   }
 
@@ -33,7 +34,7 @@ export async function showAllWeather(context: AppContext): Promise<void> {
     try {
       context.print(await describeWeather(context, city));
     } catch (error) {
-      context.print(`${cityLabel(city)}: ${errorMessage(error)}`);
+      context.print(context.theme.error(`${cityLabel(city)}: ${errorMessage(error)}`));
     }
   }
 }
@@ -42,10 +43,11 @@ export async function searchAndAddCity(context: AppContext): Promise<void> {
   const name = (await context.ask(messages.cityName)).trim();
   if (!name) return;
 
+  context.print(context.theme.muted(messages.loading.search));
   const results = await searchCities(name, context.fetchImpl);
   const [onlyResult] = results;
   if (!onlyResult) {
-    context.print(messages.noResults(name));
+    context.print(context.theme.muted(messages.noResults(name)));
     return;
   }
 
@@ -53,7 +55,7 @@ export async function searchAndAddCity(context: AppContext): Promise<void> {
   if (!city) return;
 
   if (context.store.cities.some(({ id }) => id === city.id)) {
-    context.print(messages.cityExists(cityLabel(city)));
+    context.print(context.theme.muted(messages.cityExists(cityLabel(city))));
     return;
   }
 
@@ -63,13 +65,13 @@ export async function searchAndAddCity(context: AppContext): Promise<void> {
 
   context.store = nextStore;
   await context.save();
-  context.print(messages.cityAdded(cityLabel(city)));
+  context.print(context.theme.success(messages.cityAdded(cityLabel(city))));
 }
 
 export async function deleteCity(context: AppContext): Promise<void> {
   const { cities } = context.store;
   if (cities.length === 0) {
-    context.print(messages.noCities);
+    context.print(context.theme.muted(messages.noCities));
     return;
   }
 
@@ -78,13 +80,13 @@ export async function deleteCity(context: AppContext): Promise<void> {
 
   context.store = withCityRemoved(context.store, city.id);
   await context.save();
-  context.print(messages.cityRemoved(cityLabel(city)));
+  context.print(context.theme.success(messages.cityRemoved(cityLabel(city))));
 }
 
 export async function setDefaultCity(context: AppContext): Promise<void> {
   const { cities } = context.store;
   if (cities.length === 0) {
-    context.print(messages.noCities);
+    context.print(context.theme.muted(messages.noCities));
     return;
   }
 
@@ -93,19 +95,36 @@ export async function setDefaultCity(context: AppContext): Promise<void> {
 
   context.store = withDefaultCity(context.store, city.id);
   await context.save();
-  context.print(messages.defaultCitySet(cityLabel(city)));
+  context.print(context.theme.success(messages.defaultCitySet(cityLabel(city))));
 }
 
 export async function toggleUnit(context: AppContext): Promise<void> {
   const unit = context.store.unit === "celsius" ? "fahrenheit" : "celsius";
   context.store = withUnit(context.store, unit);
   await context.save();
-  context.print(messages.unitChanged(unitSymbol(unit)));
+  context.print(context.theme.success(messages.unitChanged(unitSymbol(unit))));
+}
+
+export async function showSevenDayForecast(context: AppContext): Promise<void> {
+  const { cities } = context.store;
+  if (cities.length === 0) {
+    context.print(context.theme.muted(messages.noCities));
+    return;
+  }
+
+  const city = await chooseCity(context, cities, messages.chooseCity);
+  if (!city) return;
+
+  context.print(context.theme.muted(messages.loading.forecast));
+  const forecast = await fetchDailyForecast(city, context.store.unit, context.fetchImpl);
+  context.print(renderForecast(cityLabel(city), forecast, context.theme));
 }
 
 async function describeWeather(context: AppContext, city: City): Promise<string> {
+  context.print(context.theme.muted(messages.loading.weather));
   const reading = await fetchWeather(city, context.store.unit, context.fetchImpl);
-  return messages.weather(cityLabel(city), reading.temperature, reading.unit);
+  const temperature = context.theme.temperature(`${reading.temperature} ${reading.unit}`);
+  return messages.weather(cityLabel(city), temperature);
 }
 
 async function chooseCity(
@@ -120,7 +139,7 @@ async function chooseCity(
 
   const index = Number(answer);
   if (!Number.isInteger(index) || index < 1 || index > cities.length) {
-    context.print(messages.invalidSelection);
+    context.print(context.theme.error(messages.invalidSelection));
     return null;
   }
 

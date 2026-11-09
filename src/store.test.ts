@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   createStore,
@@ -39,6 +39,10 @@ afterEach(async () => {
 describe("resolveConfigPath", () => {
   test("prefers WEATHER_CONFIG over the default location", () => {
     expect(resolveConfigPath({ WEATHER_CONFIG: " C:\\tmp\\config.json " })).toBe("C:\\tmp\\config.json");
+  });
+
+  test("defaults to ~/.config/weather-cli/config.json", () => {
+    expect(resolveConfigPath({})).toBe(join(homedir(), ".config", "weather-cli", "config.json"));
   });
 });
 

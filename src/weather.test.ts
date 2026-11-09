@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { messages } from "./messages.ts";
 import type { City } from "./types.ts";
-import { fetchWeather, searchCities, type Fetcher } from "./weather.ts";
+import { fetchDailyForecast, fetchWeather, searchCities, type Fetcher } from "./weather.ts";
 
 const city: City = {
   id: 6094817,
@@ -91,6 +91,58 @@ describe("fetchWeather", () => {
 
   test("rejects malformed responses", async () => {
     expect(fetchWeather(city, "celsius", stubFetcher({ current: {} }))).rejects.toThrow(
+      messages.errors.response,
+    );
+  });
+});
+
+describe("fetchDailyForecast", () => {
+  const payload = {
+    daily: {
+      time: ["2026-11-09", "2026-11-10"],
+      temperature_2m_max: [6.2, 7.5],
+      temperature_2m_min: [1.4, 2.1],
+    },
+    daily_units: { temperature_2m_max: "°C", temperature_2m_min: "°C" },
+  };
+
+  test("maps the daily arrays to forecast days", async () => {
+    expect(await fetchDailyForecast(city, "celsius", stubFetcher(payload))).toEqual({
+      unit: "°C",
+      days: [
+        { date: "2026-11-09", maximum: 6.2, minimum: 1.4 },
+        { date: "2026-11-10", maximum: 7.5, minimum: 2.1 },
+      ],
+    });
+  });
+
+  test("requests seven days in the configured unit", async () => {
+    let requested: string | URL | Request | undefined;
+    const fetcher: Fetcher = async (input) => {
+      requested = input;
+      return new Response(JSON.stringify({ ...payload, daily_units: { temperature_2m_max: "°F" } }));
+    };
+
+    const forecast = await fetchDailyForecast(city, "fahrenheit", fetcher);
+
+    const url = new URL(String(requested));
+    expect(url.searchParams.get("daily")).toBe("temperature_2m_max,temperature_2m_min");
+    expect(url.searchParams.get("forecast_days")).toBe("7");
+    expect(url.searchParams.get("timezone")).toBe("auto");
+    expect(url.searchParams.get("temperature_unit")).toBe("fahrenheit");
+    expect(forecast.unit).toBe("°F");
+  });
+
+  test("rejects incomplete daily responses", async () => {
+    const missingUnit = stubFetcher({ daily: payload.daily });
+    const mismatched = stubFetcher({
+      daily: { ...payload.daily, temperature_2m_min: [1.4] },
+      daily_units: payload.daily_units,
+    });
+
+    expect(fetchDailyForecast(city, "celsius", missingUnit)).rejects.toThrow(messages.errors.response);
+    expect(fetchDailyForecast(city, "celsius", mismatched)).rejects.toThrow(messages.errors.response);
+    expect(fetchDailyForecast(city, "celsius", stubFetcher({ daily: {} }))).rejects.toThrow(
       messages.errors.response,
     );
   });

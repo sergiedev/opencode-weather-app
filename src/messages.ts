@@ -6,6 +6,7 @@ export const messages = {
     searchCity: "Buscar y agregar ciudad",
     removeCity: "Eliminar ciudad",
     setDefaultCity: "Establecer ciudad default",
+    forecast: "Pronóstico 7 días",
     settings: (symbol: string) => `Ajustes (${symbol})`,
     exit: "Salir",
   },
@@ -22,8 +23,17 @@ export const messages = {
   cityRemoved: (label: string) => `Ciudad eliminada: ${label}`,
   defaultCitySet: (label: string) => `Ciudad default: ${label}`,
   unitChanged: (symbol: string) => `Unidad actualizada: ${symbol}`,
-  weather: (label: string, temperature: number, symbol: string) =>
-    `${label}: ${temperature} ${symbol}`,
+  weather: (label: string, temperature: string) => `${label}: ${temperature}`,
+  loading: {
+    weather: "  Consultando clima…",
+    search: "  Buscando ciudades…",
+    forecast: "  Consultando pronóstico…",
+  },
+  forecast: {
+    header: (label: string) => `${label} — próximos 7 días`,
+    row: (date: string, maximum: string, minimum: string) =>
+      `  ${date} máx ${maximum}   mín ${minimum}`,
+  },
   invalidConfig: (path: string) => `No se pudo leer la configuración en ${path}.`,
   bye: "Hasta luego.",
   errors: {

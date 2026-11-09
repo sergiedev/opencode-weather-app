@@ -5,7 +5,7 @@ import { parseCity } from "./city.ts";
 import { messages } from "./messages.ts";
 import type { City, Store, Unit } from "./types.ts";
 
-const CONFIG_DIRECTORY = ".weather-cli";
+const CONFIG_DIRECTORY = join(".config", "weather-cli");
 const CONFIG_FILENAME = "config.json";
 const TEMP_SUFFIX = ".tmp";
 

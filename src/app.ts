@@ -1,6 +1,7 @@
 import { createInterface } from "node:readline/promises";
-import { deleteCity, searchAndAddCity, setDefaultCity, showAllWeather, showDefaultWeather, toggleUnit } from "./actions.ts";
-import type { Action, AppContext } from "./context.ts";
+import { createTheme, shouldUseColor } from "./colors.ts";
+import { findAction } from "./commands.ts";
+import type { AppContext } from "./context.ts";
 import { errorMessage } from "./errors.ts";
 import { renderMenu } from "./menu.ts";
 import { messages } from "./messages.ts";
@@ -9,20 +10,12 @@ import type { Fetcher } from "./weather.ts";
 
 const EXIT_OPTION = "9";
 
-const ACTIONS: Record<string, Action> = {
-  "1": showDefaultWeather,
-  "2": showAllWeather,
-  "3": searchAndAddCity,
-  "4": deleteCity,
-  "5": setDefaultCity,
-  "8": toggleUnit,
-};
-
 export interface RunOptions {
   configPath?: string;
   fetcher?: Fetcher;
   input?: NodeJS.ReadableStream;
   output?: NodeJS.WritableStream;
+  color?: boolean;
 }
 
 class InputClosedError extends Error {}
@@ -32,12 +25,14 @@ export async function runApp(options: RunOptions = {}): Promise<void> {
   const fetcher = options.fetcher ?? fetch;
   const input = options.input ?? process.stdin;
   const output = options.output ?? process.stdout;
+  const theme = createTheme(options.color ?? shouldUseColor(output));
   const terminal = createInterface({ input, output });
   const lines = terminal[Symbol.asyncIterator]();
 
   const context: AppContext = {
     store: await loadStore(configPath),
     fetchImpl: fetcher,
+    theme,
     print: (text) => output.write(`${text}\n`),
     ask: async (question) => {
       output.write(question);
@@ -59,24 +54,24 @@ export async function runApp(options: RunOptions = {}): Promise<void> {
 
 async function runLoop(context: AppContext): Promise<void> {
   while (true) {
-    context.print(renderMenu(context.store));
+    context.print(renderMenu(context.store, context.theme));
 
     const input = (await context.ask(messages.selectOption)).trim();
     if (input === EXIT_OPTION) {
-      context.print(messages.bye);
+      context.print(context.theme.muted(messages.bye));
       return;
     }
 
-    const action = ACTIONS[input];
+    const action = findAction(input);
     if (!action) {
-      context.print(messages.invalidOption);
+      context.print(context.theme.error(messages.invalidOption));
       continue;
     }
 
     try {
       await action(context);
     } catch (error) {
-      context.print(errorMessage(error));
+      context.print(context.theme.error(errorMessage(error)));
     }
   }
 }
