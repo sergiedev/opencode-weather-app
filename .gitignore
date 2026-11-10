@@ -7,6 +7,8 @@ dist
 *.tgz
 /weather
 /weather.exe
+/weather-*
+.bun-cache
 
 # code coverage
 coverage
