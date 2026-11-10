@@ -1,6 +1,6 @@
-import type { Theme } from "./colors.ts";
-import type { Store } from "./types.ts";
-import type { Fetcher } from "./weather.ts";
+import type { Fetcher } from "../api/client.ts";
+import type { Theme } from "../utils/colors.ts";
+import type { Store } from "./Store.ts";
 
 export interface AppContext {
   store: Store;

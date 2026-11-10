@@ -1,16 +1,9 @@
-import { parseCity } from "./city.ts";
-import { messages } from "./messages.ts";
-import type { City, Unit } from "./types.ts";
-
-const GEOCODING_ENDPOINT = "https://geocoding-api.open-meteo.com/v1/search";
-const FORECAST_ENDPOINT = "https://api.open-meteo.com/v1/forecast";
-const REQUEST_TIMEOUT_MS = 10_000;
-
-export type Fetcher = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
-
-interface GeocodingPayload {
-  results?: unknown[];
-}
+import { messages } from "../presentation/messages.ts";
+import type { Unit } from "../types/Store.ts";
+import type { City } from "../types/City.ts";
+import type { DailyForecast, WeatherReading } from "../types/Weather.ts";
+import { FORECAST_DAYS, FORECAST_ENDPOINT } from "../utils/constants.ts";
+import { requestJson, type Fetcher } from "./client.ts";
 
 interface ForecastPayload {
   current?: { temperature_2m?: unknown };
@@ -24,36 +17,6 @@ interface ForecastPayload {
     temperature_2m_max?: unknown;
     temperature_2m_min?: unknown;
   };
-}
-
-export interface WeatherReading {
-  temperature: number;
-  unit: string;
-}
-
-export interface ForecastDay {
-  date: string;
-  maximum: number;
-  minimum: number;
-}
-
-export interface DailyForecast {
-  unit: string;
-  days: ForecastDay[];
-}
-
-export async function searchCities(name: string, fetcher: Fetcher = fetch): Promise<City[]> {
-  const url = new URL(GEOCODING_ENDPOINT);
-  url.searchParams.set("name", name);
-  url.searchParams.set("count", "5");
-  url.searchParams.set("language", "es");
-  url.searchParams.set("format", "json");
-
-  const payload = (await requestJson(url, fetcher)) as GeocodingPayload;
-  return (payload.results ?? []).flatMap((result) => {
-    const city = parseCity(result);
-    return city ? [city] : [];
-  });
 }
 
 export async function fetchWeather(
@@ -87,7 +50,7 @@ export async function fetchDailyForecast(
   url.searchParams.set("latitude", String(city.latitude));
   url.searchParams.set("longitude", String(city.longitude));
   url.searchParams.set("daily", "temperature_2m_max,temperature_2m_min");
-  url.searchParams.set("forecast_days", "7");
+  url.searchParams.set("forecast_days", FORECAST_DAYS);
   url.searchParams.set("timezone", "auto");
   url.searchParams.set("temperature_unit", unit);
 
@@ -130,23 +93,4 @@ function parseForecast(payload: ForecastPayload): DailyForecast {
 
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
-}
-
-async function requestJson(url: URL, fetcher: Fetcher): Promise<unknown> {
-  let response: Response;
-  try {
-    response = await fetcher(url, { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
-  } catch {
-    throw new Error(messages.errors.network);
-  }
-
-  if (!response.ok) {
-    throw new Error(messages.errors.http(response.status));
-  }
-
-  try {
-    return await response.json();
-  } catch {
-    throw new Error(messages.errors.response);
-  }
 }

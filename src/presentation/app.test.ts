@@ -3,9 +3,9 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable, Writable } from "node:stream";
+import type { Fetcher } from "../api/client.ts";
+import { loadStore } from "../storage/settingsStorage.ts";
 import { runApp } from "./app.ts";
-import { loadStore } from "./store.ts";
-import type { Fetcher } from "./weather.ts";
 
 const directories: string[] = [];
 

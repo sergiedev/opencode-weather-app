@@ -2,18 +2,14 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
+import type { City } from "../types/City.ts";
 import {
   createStore,
-  findDefaultCity,
   loadStore,
   resolveConfigPath,
   saveStore,
-  withCityAdded,
-  withCityRemoved,
-  withDefaultCity,
   withUnit,
-} from "./store.ts";
-import type { City } from "./types.ts";
+} from "./settingsStorage.ts";
 
 const city: City = {
   id: 6094817,
@@ -53,10 +49,7 @@ describe("loadStore", () => {
 
   test("round-trips a saved store", async () => {
     const path = await tempConfigPath();
-    const store = withDefaultCity(
-      withUnit(withCityAdded(createStore(), city), "fahrenheit"),
-      city.id,
-    );
+    const store = withUnit({ ...createStore(), cities: [city], defaultCityId: city.id }, "fahrenheit");
 
     await saveStore(path, store);
 
@@ -90,22 +83,11 @@ describe("loadStore", () => {
   });
 });
 
-describe("store helpers", () => {
-  test("does not duplicate cities with the same id", () => {
-    const store = withCityAdded(withCityAdded(createStore(), city), city);
-    expect(store.cities).toHaveLength(1);
-  });
+describe("withUnit", () => {
+  test("returns a new store with the requested unit", () => {
+    const store = createStore();
 
-  test("clears the default when its city is removed", () => {
-    const store = withDefaultCity(withCityAdded(createStore(), city), city.id);
-    const next = withCityRemoved(store, city.id);
-
-    expect(next.cities).toEqual([]);
-    expect(next.defaultCityId).toBeNull();
-    expect(findDefaultCity(next)).toBeNull();
-  });
-
-  test("ignores unknown default ids", () => {
-    expect(withDefaultCity(createStore(), 42)).toEqual(createStore());
+    expect(withUnit(store, "fahrenheit")).toEqual({ ...store, unit: "fahrenheit" });
+    expect(store.unit).toBe("celsius");
   });
 });

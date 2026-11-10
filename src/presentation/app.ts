@@ -1,14 +1,13 @@
-import { createInterface } from "node:readline/promises";
-import { createTheme, shouldUseColor } from "./colors.ts";
-import { findAction } from "./commands.ts";
-import type { AppContext } from "./context.ts";
-import { errorMessage } from "./errors.ts";
-import { renderMenu } from "./menu.ts";
+import type { Fetcher } from "../api/client.ts";
+import { loadStore, resolveConfigPath, saveStore } from "../storage/settingsStorage.ts";
+import type { AppContext } from "../types/AppContext.ts";
+import { createTheme, shouldUseColor } from "../utils/colors.ts";
+import { EXIT_OPTION } from "../utils/constants.ts";
+import { errorMessage } from "../utils/errors.ts";
+import { createPrompter, InputClosedError } from "./input.ts";
+import { findAction, renderMenu } from "./menu.ts";
 import { messages } from "./messages.ts";
-import { loadStore, resolveConfigPath, saveStore } from "./store.ts";
-import type { Fetcher } from "./weather.ts";
-
-const EXIT_OPTION = "9";
+import { createPrinter } from "./output.ts";
 
 export interface RunOptions {
   configPath?: string;
@@ -18,28 +17,20 @@ export interface RunOptions {
   color?: boolean;
 }
 
-class InputClosedError extends Error {}
-
 export async function runApp(options: RunOptions = {}): Promise<void> {
   const configPath = options.configPath ?? resolveConfigPath();
   const fetcher = options.fetcher ?? fetch;
   const input = options.input ?? process.stdin;
   const output = options.output ?? process.stdout;
   const theme = createTheme(options.color ?? shouldUseColor(output));
-  const terminal = createInterface({ input, output });
-  const lines = terminal[Symbol.asyncIterator]();
+  const prompter = createPrompter(input, output);
 
   const context: AppContext = {
     store: await loadStore(configPath),
     fetchImpl: fetcher,
     theme,
-    print: (text) => output.write(`${text}\n`),
-    ask: async (question) => {
-      output.write(question);
-      const next = await lines.next();
-      if (next.done) throw new InputClosedError();
-      return next.value;
-    },
+    print: createPrinter(output),
+    ask: (question) => prompter.ask(question),
     save: () => saveStore(configPath, context.store),
   };
 
@@ -48,7 +39,7 @@ export async function runApp(options: RunOptions = {}): Promise<void> {
   } catch (error) {
     if (!(error instanceof InputClosedError)) throw error;
   } finally {
-    terminal.close();
+    prompter.close();
   }
 }
 

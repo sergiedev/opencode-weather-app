@@ -1,4 +1,4 @@
-import type { City } from "./types.ts";
+import type { City } from "../types/City.ts";
 
 export function parseCity(value: unknown): City | null {
   if (typeof value !== "object" || value === null) return null;

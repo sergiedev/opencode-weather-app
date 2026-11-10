@@ -1,13 +1,7 @@
-import type { Theme } from "./colors.ts";
+import type { DailyForecast } from "../types/Weather.ts";
+import type { Theme } from "../utils/colors.ts";
+import { formatShortDate } from "../utils/format.ts";
 import { messages } from "./messages.ts";
-import type { DailyForecast } from "./weather.ts";
-
-const DATE_FORMAT = new Intl.DateTimeFormat("es-ES", {
-  weekday: "short",
-  day: "2-digit",
-  month: "short",
-  timeZone: "UTC",
-});
 
 const DATE_WIDTH = 12;
 
@@ -24,7 +18,5 @@ export function renderForecast(label: string, forecast: DailyForecast, theme: Th
 }
 
 function formatDate(date: string): string {
-  const parsed = new Date(`${date}T12:00:00Z`);
-  const formatted = Number.isNaN(parsed.getTime()) ? date : DATE_FORMAT.format(parsed);
-  return formatted.padEnd(DATE_WIDTH);
+  return formatShortDate(date).padEnd(DATE_WIDTH);
 }

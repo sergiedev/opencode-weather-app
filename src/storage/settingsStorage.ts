@@ -1,12 +1,11 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
-import { parseCity } from "./city.ts";
-import { messages } from "./messages.ts";
-import type { City, Store, Unit } from "./types.ts";
+import { messages } from "../presentation/messages.ts";
+import type { Store, Unit } from "../types/Store.ts";
+import { CONFIG_DIRECTORY, CONFIG_FILENAME } from "../utils/constants.ts";
+import { parseCity } from "../utils/parseCity.ts";
 
-const CONFIG_DIRECTORY = join(".config", "weather-cli");
-const CONFIG_FILENAME = "config.json";
 const TEMP_SUFFIX = ".tmp";
 
 export function resolveConfigPath(env: Record<string, string | undefined> = process.env): string {
@@ -39,26 +38,6 @@ export async function saveStore(path: string, store: Store): Promise<void> {
   const tempPath = `${path}${TEMP_SUFFIX}`;
   await writeFile(tempPath, `${JSON.stringify(store, null, 2)}\n`, "utf8");
   await rename(tempPath, path);
-}
-
-export function findDefaultCity(store: Store): City | null {
-  return store.cities.find((city) => city.id === store.defaultCityId) ?? null;
-}
-
-export function withCityAdded(store: Store, city: City): Store {
-  if (store.cities.some(({ id }) => id === city.id)) return store;
-  return { ...store, cities: [...store.cities, city] };
-}
-
-export function withCityRemoved(store: Store, cityId: number): Store {
-  const cities = store.cities.filter(({ id }) => id !== cityId);
-  const defaultCityId = store.defaultCityId === cityId ? null : store.defaultCityId;
-  return { ...store, cities, defaultCityId };
-}
-
-export function withDefaultCity(store: Store, cityId: number): Store {
-  const exists = store.cities.some(({ id }) => id === cityId);
-  return exists ? { ...store, defaultCityId: cityId } : store;
 }
 
 export function withUnit(store: Store, unit: Unit): Store {

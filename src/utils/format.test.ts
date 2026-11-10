@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { cityLabel, unitSymbol } from "./format.ts";
-import type { City } from "./types.ts";
+import type { City } from "../types/City.ts";
+import { cityLabel, formatShortDate, unitSymbol } from "./format.ts";
 
 const city: City = { id: 1, name: "Ottawa", latitude: 45.4, longitude: -75.7 };
 
@@ -19,5 +19,18 @@ describe("unitSymbol", () => {
   test("maps units to symbols", () => {
     expect(unitSymbol("celsius")).toBe("°C");
     expect(unitSymbol("fahrenheit")).toBe("°F");
+  });
+});
+
+describe("formatShortDate", () => {
+  test("formats ISO dates in Spanish without shifting the day", () => {
+    const formatted = formatShortDate("2026-11-09");
+
+    expect(formatted).toContain("09");
+    expect(formatted).toContain("nov");
+  });
+
+  test("keeps unparseable values untouched", () => {
+    expect(formatShortDate("not-a-date")).toBe("not-a-date");
   });
 });

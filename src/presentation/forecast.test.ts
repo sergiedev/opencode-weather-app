@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { createTheme } from "./colors.ts";
+import type { DailyForecast } from "../types/Weather.ts";
+import { createTheme } from "../utils/colors.ts";
 import { renderForecast } from "./forecast.ts";
-import type { DailyForecast } from "./weather.ts";
 
 const forecast: DailyForecast = {
   unit: "°C",

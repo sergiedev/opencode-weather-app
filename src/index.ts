@@ -1,5 +1,5 @@
-import { runApp } from "./src/app.ts";
-import { errorMessage } from "./src/errors.ts";
+import { runApp } from "./presentation/app.ts";
+import { errorMessage } from "./utils/errors.ts";
 
 try {
   await runApp();
