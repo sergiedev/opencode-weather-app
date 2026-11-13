@@ -22,7 +22,6 @@ describe("citiesStorage helpers", () => {
   test("does not duplicate cities with the same id", () => {
     const store = withCityAdded(withCityAdded(createStore(), city), city);
     expect(store.cities).toHaveLength(1);
-    expect(true).toBe(false);
   });
 
   test("clears the default when its city is removed", () => {
